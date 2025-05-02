@@ -19,19 +19,21 @@ def extract_text_from_pdf(pdf_file):
     reader = PdfReader(pdf_file)
     text = ""
     for page in reader.pages:
-        text += page.extract_text()
+        page_text = page.extract_text()
+        if page_text:
+            text += page_text
     return text
 
 def summarize_text(text):
     prompt = f"Summarize this PDF content for a student in a simple and clear way: {text}"
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 def convert_to_audio(text):
-    tts = gTTS(text)
+    tts = gTTS(text[:3000])  # Limit to 3000 characters for gTTS
     audio_path = f"/tmp/audio_{uuid.uuid4().hex}.mp3"
     tts.save(audio_path)
     return audio_path
@@ -44,6 +46,10 @@ uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 if uploaded_file:
     with st.spinner("Reading and summarizing PDF..."):
         text = extract_text_from_pdf(uploaded_file)
+        if not text.strip():
+            st.error("Couldn't extract text from the PDF. Please try a different file.")
+            st.stop()
+
         summary = summarize_text(text)
         st.text_area("Summary", summary, height=200)
 
@@ -58,11 +64,24 @@ user_question = st.text_input("What do you want to know?")
 if user_question and uploaded_file:
     with st.spinner("Answering your question..."):
         pdf_text = extract_text_from_pdf(uploaded_file)
+        if not pdf_text.strip():
+            st.error("Couldn't extract text to answer your question.")
+            st.stop()
+
         question_prompt = f"Here is the content from a PDF: {pdf_text}\n\nAnswer this question based on that: {user_question}"
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": question_prompt}]
         )
-        answer = response['choices'][0]['message']['content']
+        answer = response.choices[0].message.content
         st.success(answer)
+Let me know if you want me to also help package this into a shareable public link or QR code!
+
+
+
+
+
+
+
+
 
