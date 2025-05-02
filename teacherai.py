@@ -4,7 +4,7 @@ Spyder Editor
 
 This is a temporary script file.
 """
-iimport streamlit as st
+import streamlit as st
 import os
 import openai
 import tempfile
