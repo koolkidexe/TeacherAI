@@ -4,7 +4,7 @@ Spyder Editor
 
 This is a temporary script file.
 """
-import streamlit as st
+iimport streamlit as st
 import os
 import openai
 import tempfile
@@ -75,13 +75,3 @@ if user_question and uploaded_file:
         )
         answer = response.choices[0].message.content
         st.success(answer)
-Let me know if you want me to also help package this into a shareable public link or QR code!
-
-
-
-
-
-
-
-
-
