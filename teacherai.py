@@ -13,7 +13,7 @@ from PyPDF2 import PdfReader
 import uuid
 
 # Set your OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = "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"
 
 def extract_text_from_pdf(pdf_file):
     reader = PdfReader(pdf_file)
