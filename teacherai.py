@@ -27,7 +27,7 @@ def extract_text_from_pdf(pdf_file):
 def summarize_text(text):
     prompt = f"Summarize this PDF content for a student in a simple and clear way: {text}"
     response = openai.chat.completions.create(
-        model="gpt-4",
+        model="o3",
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
@@ -70,7 +70,7 @@ if user_question and uploaded_file:
 
         question_prompt = f"Here is the content from a PDF: {pdf_text}\n\nAnswer this question based on that: {user_question}"
         response = openai.chat.completions.create(
-            model="gpt-4",
+            model="o3",
             messages=[{"role": "user", "content": question_prompt}]
         )
         answer = response.choices[0].message.content
