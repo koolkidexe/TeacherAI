@@ -1,4 +1,5 @@
 streamlit
-openai
+requests
+gtts
 PyPDF2
-gTTS
+openai
