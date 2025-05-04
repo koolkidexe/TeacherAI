@@ -27,7 +27,7 @@ def summarize_text(text, api_key):
     openai.api_key = api_key
     prompt = f"Summarize this PDF content for a student in a simple and clear way:\n\n{text}"
     response = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
@@ -80,7 +80,7 @@ if user_question and uploaded_file and api_key:
         try:
             openai.api_key = api_key
             response = openai.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": question_prompt}]
             )
             answer = response.choices[0].message.content
