@@ -1,5 +1,5 @@
 streamlit
-requests
+google-generativeai
 gtts
 PyPDF2
 openai
