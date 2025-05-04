@@ -12,7 +12,7 @@ api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
 # === Setup Gemini Client ===
 def configure_gemini(api_key):
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-pro")
+    return genai.GenerativeModel("gemini-2.0-flash")
 
 # === PDF Text Extraction ===
 def extract_text_from_pdf(pdf_file):
