@@ -18,7 +18,7 @@ def extract_text_from_pdf(pdf_file):
 def summarize_text(text, api_key):
     openai.api_key = api_key
     response = openai.chat.completions.create(
-        model="gpt-4",
+        model="gpt-4o",
         messages=[{"role": "user", "content": f"Summarize this for a student:\n\n{text}"}]
     )
     return response.choices[0].message.content
@@ -63,7 +63,7 @@ if uploaded_file and api_key:
             try:
                 openai.api_key = api_key
                 response = openai.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-4o",
                     messages=[{"role": "user", "content": f"PDF content:\n{text}\n\nQuestion: {user_question}"}]
                 )
                 st.success(response.choices[0].message.content)
