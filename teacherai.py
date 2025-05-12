@@ -13,7 +13,7 @@ st.sidebar.markdown("## 🔐 API Configuration")
 api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("Made with ❤️ by [YourName]")
+st.sidebar.markdown("Made with ❤️")
 
 # === Setup Gemini Client ===
 def configure_gemini(api_key):
