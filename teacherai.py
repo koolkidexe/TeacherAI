@@ -1,19 +1,14 @@
 import streamlit as st
 import google.generativeai as genai
 from PyPDF2 import PdfReader
-from gtts import gTTS
+import requests
 import uuid
 import os
 
-# === Page Config ===
-st.set_page_config(page_title="📚 Teacher AI: PDF to Podcast", page_icon="🎧", layout="centered")
-
 # === Sidebar ===
-st.sidebar.markdown("## 🔐 API Configuration")
-api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("Made with ❤️")
+st.sidebar.header("API Configuration")
+gemini_api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
+elevenlabs_api_key = st.sidebar.text_input("Enter your ElevenLabs API key", type="password")
 
 # === Setup Gemini Client ===
 def configure_gemini(api_key):
@@ -31,60 +26,77 @@ def summarize_text(text, model):
     response = model.generate_content(prompt)
     return response.text
 
-# === Text-to-Audio ===
-def convert_to_audio(text):
-    tts = gTTS(text[:3000])
+# === Text-to-Audio with ElevenLabs ===
+def convert_to_audio_elevenlabs(text, api_key):
+    voice_id = "Rachel"  # Try "Rachel", "Bella", "Antoni", etc.
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "text": text[:3000],
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code != 200:
+        raise Exception(f"ElevenLabs TTS failed: {response.text}")
+
     audio_path = f"/tmp/audio_{uuid.uuid4().hex}.mp3"
-    tts.save(audio_path)
+    with open(audio_path, "wb") as f:
+        f.write(response.content)
+
     return audio_path
 
-# === Header ===
-st.markdown("<h1 style='text-align: center;'>🎧 Teacher AI: Turn Your PDF into a Podcast</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Upload a PDF. Get a summary. Listen to it as audio. Ask questions. Easy!</p>", unsafe_allow_html=True)
-st.markdown("---")
+# === Streamlit App ===
+st.title("Teacher AI: PDF to Podcast with Gemini")
 
-# === Main App ===
-uploaded_file = st.file_uploader("📄 Upload a PDF file", type="pdf")
-user_question = st.text_input("❓ Have a question about your PDF? Ask here!")
+uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
+user_question = st.text_input("Ask something about your PDF")
 
-if uploaded_file and not api_key:
-    st.warning("⚠️ Please enter your Gemini API key in the sidebar.")
+if uploaded_file and not gemini_api_key:
+    st.warning("Please enter your Gemini API key.")
 
-if uploaded_file and api_key:
+if uploaded_file and not elevenlabs_api_key:
+    st.warning("Please enter your ElevenLabs API key.")
+
+if uploaded_file and gemini_api_key and elevenlabs_api_key:
     try:
-        model = configure_gemini(api_key)
+        model = configure_gemini(gemini_api_key)
     except Exception as e:
-        st.error(f"❌ Failed to configure Gemini: {e}")
+        st.error(f"Failed to configure Gemini: {e}")
         st.stop()
 
     text = extract_text_from_pdf(uploaded_file)
 
     if not text.strip():
-        st.error("❌ Couldn't extract text. Try a different PDF.")
+        st.error("Couldn't extract text. Try a different PDF.")
         st.stop()
 
-    with st.spinner("🧠 Summarizing your PDF..."):
+    with st.spinner("Summarizing..."):
         try:
             summary = summarize_text(text, model)
-            summary = summary.replace("*", "")  # Remove asterisks from summary
-            st.success("✅ Summary complete!")
-            st.markdown("### ✍️ Summary")
-            st.text_area("Summary Text", summary, height=250)
+            st.text_area("Summary", summary, height=200)
         except Exception as e:
-            st.error(f"❌ Error during summarization: {e}")
+            st.error(f"Error during summarization: {e}")
             st.stop()
 
-    with st.spinner("🔊 Converting to audio..."):
-        audio_file = convert_to_audio(summary)
-        st.audio(audio_file, format="audio/mp3")
-        st.success("✅ Audio ready!")
+    with st.spinner("Generating audio..."):
+        try:
+            audio_file = convert_to_audio_elevenlabs(summary, elevenlabs_api_key)
+            st.audio(audio_file, format="audio/mp3")
+        except Exception as e:
+            st.error(f"Audio generation failed: {e}")
 
     if user_question:
-        with st.spinner("💬 Answering your question..."):
+        with st.spinner("Answering your question..."):
             try:
                 prompt = f"Based on this PDF:\n{text[:12000]}\n\nAnswer this question:\n{user_question}"
                 response = model.generate_content(prompt)
-                st.markdown("### 🧾 Answer")
                 st.success(response.text)
             except Exception as e:
-                st.error(f"❌ Error during Q&A: {e}")
+                st.error(f"Error during Q&A: {e}")
