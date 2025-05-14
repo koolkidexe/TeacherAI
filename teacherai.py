@@ -5,6 +5,9 @@ import requests
 import uuid
 import os
 
+# Set Streamlit page config FIRST
+st.set_page_config(page_title="Teacher AI", page_icon="🎧")
+
 # === Sidebar Configuration ===
 st.sidebar.header("API Configuration")
 gemini_api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
@@ -68,7 +71,6 @@ def convert_to_audio_elevenlabs(text, api_key, voice_name="Rachel"):
     return audio_path
 
 # === Streamlit App ===
-st.set_page_config(page_title="Teacher AI", page_icon="🎧")
 st.title("Teacher AI: PDF to Podcast")
 
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
