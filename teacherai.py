@@ -5,10 +5,11 @@ import requests
 import uuid
 import os
 
-# === Sidebar ===
+# === Sidebar Configuration ===
 st.sidebar.header("API Configuration")
 gemini_api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
 elevenlabs_api_key = st.sidebar.text_input("Enter your ElevenLabs API key", type="password")
+voice_name = st.sidebar.text_input("Voice name (e.g., Rachel, Bella, Antoni)", value="Rachel")
 
 # === Setup Gemini Client ===
 def configure_gemini(api_key):
@@ -26,9 +27,24 @@ def summarize_text(text, model):
     response = model.generate_content(prompt)
     return response.text
 
+# === ElevenLabs Voice Lookup ===
+def get_voice_id_by_name(api_key, name="Rachel"):
+    response = requests.get(
+        "https://api.elevenlabs.io/v1/voices",
+        headers={"xi-api-key": api_key}
+    )
+    if response.status_code != 200:
+        raise Exception("Failed to fetch voice list from ElevenLabs.")
+
+    voices = response.json()["voices"]
+    for voice in voices:
+        if voice["name"].lower() == name.lower():
+            return voice["voice_id"]
+    raise Exception(f"Voice '{name}' not found in your ElevenLabs account.")
+
 # === Text-to-Audio with ElevenLabs ===
-def convert_to_audio_elevenlabs(text, api_key):
-    voice_id = "Rachel"  # Try "Rachel", "Bella", "Antoni", etc.
+def convert_to_audio_elevenlabs(text, api_key, voice_name="Rachel"):
+    voice_id = get_voice_id_by_name(api_key, voice_name)
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 
     headers = {
@@ -42,7 +58,6 @@ def convert_to_audio_elevenlabs(text, api_key):
     }
 
     response = requests.post(url, headers=headers, json=payload)
-
     if response.status_code != 200:
         raise Exception(f"ElevenLabs TTS failed: {response.text}")
 
@@ -53,7 +68,8 @@ def convert_to_audio_elevenlabs(text, api_key):
     return audio_path
 
 # === Streamlit App ===
-st.title("Teacher AI: PDF to Podcast with Gemini")
+st.set_page_config(page_title="Teacher AI", page_icon="🎧")
+st.title("Teacher AI: PDF to Podcast")
 
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 user_question = st.text_input("Ask something about your PDF")
@@ -87,16 +103,4 @@ if uploaded_file and gemini_api_key and elevenlabs_api_key:
 
     with st.spinner("Generating audio..."):
         try:
-            audio_file = convert_to_audio_elevenlabs(summary, elevenlabs_api_key)
-            st.audio(audio_file, format="audio/mp3")
-        except Exception as e:
-            st.error(f"Audio generation failed: {e}")
-
-    if user_question:
-        with st.spinner("Answering your question..."):
-            try:
-                prompt = f"Based on this PDF:\n{text[:12000]}\n\nAnswer this question:\n{user_question}"
-                response = model.generate_content(prompt)
-                st.success(response.text)
-            except Exception as e:
-                st.error(f"Error during Q&A: {e}")
+            audio_file = convert_to_audio_
