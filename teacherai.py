@@ -103,4 +103,16 @@ if uploaded_file and gemini_api_key and elevenlabs_api_key:
 
     with st.spinner("Generating audio..."):
         try:
-            audio_file = convert_to_audio_
+            audio_file = convert_to_audio_elevenlabs(summary, elevenlabs_api_key, voice_name)
+            st.audio(audio_file, format="audio/mp3")
+        except Exception as e:
+            st.error(f"Audio generation failed: {e}")
+
+    if user_question:
+        with st.spinner("Answering your question..."):
+            try:
+                prompt = f"Based on this PDF:\n{text[:12000]}\n\nAnswer this question:\n{user_question}"
+                response = model.generate_content(prompt)
+                st.success(response.text)
+            except Exception as e:
+                st.error(f"Error during Q&A: {e}")
