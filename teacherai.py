@@ -3,7 +3,6 @@ import google.generativeai as genai
 from PyPDF2 import PdfReader
 from gtts import gTTS
 import uuid
-import os
 
 # Set Streamlit page config
 st.set_page_config(page_title="Teacher AI", page_icon="🎧")
@@ -22,17 +21,16 @@ def extract_text_from_pdf(pdf_file):
     reader = PdfReader(pdf_file)
     return "\n".join([page.extract_text() or "" for page in reader.pages])
 
-# === Summarization (with asterisk removal) ===
+# === Summarization (clean *after* Gemini responds) ===
 def summarize_text(text, model):
-    clean_text = text.replace("*", "")  # Remove asterisks
-    prompt = f"Summarize this PDF for a student:\n\n{clean_text[:12000]}"
+    prompt = f"Summarize this PDF for a student:\n\n{text[:12000]}"
     response = model.generate_content(prompt)
-    return response.text
+    clean_summary = response.text.replace("*", "")  # Remove asterisks from Gemini output
+    return clean_summary
 
-# === Text-to-Audio with gTTS (cleaned) ===
+# === Text-to-Audio with gTTS ===
 def convert_to_audio_gtts(text):
-    clean_text = text.replace("*", "")  # Also clean asterisks from the summary
-    tts = gTTS(clean_text[:3000])  # gTTS character limit
+    tts = gTTS(text[:3000])  # gTTS char limit
     audio_path = f"/tmp/audio_{uuid.uuid4().hex}.mp3"
     tts.save(audio_path)
     return audio_path
@@ -61,7 +59,7 @@ if uploaded_file and gemini_api_key:
     with st.spinner("Summarizing..."):
         try:
             summary = summarize_text(text, model)
-            st.text_area("Summary", summary, height=200)
+            st.text_area("Summary (cleaned)", summary, height=200)
         except Exception as e:
             st.error(f"Summarization error: {e}")
             st.stop()
@@ -78,6 +76,7 @@ if uploaded_file and gemini_api_key:
             try:
                 prompt = f"Based on this PDF:\n{text[:12000]}\n\nAnswer this question:\n{user_question}"
                 response = model.generate_content(prompt)
-                st.success(response.text)
+                answer = response.text.replace("*", "")  # Clean answer too
+                st.success(answer)
             except Exception as e:
                 st.error(f"Q&A error: {e}")
