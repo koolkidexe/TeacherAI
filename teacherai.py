@@ -21,11 +21,11 @@ def extract_text_from_pdf(pdf_file):
     reader = PdfReader(pdf_file)
     return "\n".join([page.extract_text() or "" for page in reader.pages])
 
-# === Summarization (clean *after* Gemini responds) ===
+# === Summarization (clean prompt + remove asterisks after) ===
 def summarize_text(text, model):
-    prompt = f"Summarize this PDF for a student:\n\n{text[:12000]}"
+    prompt = text[:12000]  # Just the raw PDF content, no instructions
     response = model.generate_content(prompt)
-    clean_summary = response.text.replace("*", "")  # Remove asterisks from Gemini output
+    clean_summary = response.text.replace("*", "")  # Remove asterisks
     return clean_summary
 
 # === Text-to-Audio with gTTS ===
@@ -59,7 +59,7 @@ if uploaded_file and gemini_api_key:
     with st.spinner("Summarizing..."):
         try:
             summary = summarize_text(text, model)
-            st.text_area("Summary (cleaned)", summary, height=200)
+            st.text_area("Summary", summary, height=200)
         except Exception as e:
             st.error(f"Summarization error: {e}")
             st.stop()
@@ -74,9 +74,9 @@ if uploaded_file and gemini_api_key:
     if user_question:
         with st.spinner("Answering your question..."):
             try:
-                prompt = f"Based on this PDF:\n{text[:12000]}\n\nAnswer this question:\n{user_question}"
+                prompt = f"{text[:12000]}\n\nAnswer this question:\n{user_question}"
                 response = model.generate_content(prompt)
-                answer = response.text.replace("*", "")  # Clean answer too
+                answer = response.text.replace("*", "")
                 st.success(answer)
             except Exception as e:
                 st.error(f"Q&A error: {e}")
