@@ -1,8 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
 from PyPDF2 import PdfReader
-from gtts import gTTS
 import uuid
+import requests
+import time
 
 # Set Streamlit page config
 st.set_page_config(page_title="Teacher AI", page_icon="🎧")
@@ -10,6 +11,9 @@ st.set_page_config(page_title="Teacher AI", page_icon="🎧")
 # === Sidebar Configuration ===
 st.sidebar.header("API Configuration")
 gemini_api_key = st.sidebar.text_input("Enter your Gemini API key", type="password")
+st.sidebar.subheader("PlayHT Configuration")
+playht_user_id = st.sidebar.text_input("PlayHT User ID", type="password")
+playht_api_key = st.sidebar.text_input("PlayHT API Key", type="password")
 
 # === Gemini Setup ===
 def configure_gemini(api_key):
@@ -25,14 +29,42 @@ def extract_text_from_pdf(pdf_file):
 def summarize_text(text, model):
     prompt = text[:12000]  # Just the raw PDF content, no instructions
     response = model.generate_content(prompt)
-    clean_summary = response.text.replace("*", "")  # Remove asterisks
-    return clean_summary
+    return response.text.replace("*", "")  # Remove asterisks from summary
 
-# === Text-to-Audio with gTTS ===
-def convert_to_audio_gtts(text):
-    tts = gTTS(text[:3000])  # gTTS char limit
+# === Text-to-Audio with PlayHT (Alfonso voice) ===
+def convert_to_audio_playht(text, user_id, api_key):
+    url = "https://play.ht/api/v2/tts"
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "X-User-Id": user_id
+    }
+    payload = {
+        "text": text[:3000],
+        "voice": "s3://voice-cloning-zero-shot/alfonso",  # Alfonso voice
+        "output_format": "mp3"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+    transcription_id = response.json()["transcriptionId"]
+
+    # Poll until audio is ready
+    status_url = f"https://play.ht/api/v2/tts/{transcription_id}"
+    while True:
+        status_response = requests.get(status_url, headers=headers)
+        status_data = status_response.json()
+        if status_data.get("audioUrl"):
+            break
+        time.sleep(2)
+
+    audio_url = status_data["audioUrl"]
+    audio_data = requests.get(audio_url).content
     audio_path = f"/tmp/audio_{uuid.uuid4().hex}.mp3"
-    tts.save(audio_path)
+    with open(audio_path, "wb") as f:
+        f.write(audio_data)
+
     return audio_path
 
 # === Streamlit App ===
@@ -65,18 +97,21 @@ if uploaded_file and gemini_api_key:
             st.stop()
 
     with st.spinner("Generating audio..."):
-        try:
-            audio_file = convert_to_audio_gtts(summary)
-            st.audio(audio_file, format="audio/mp3")
-        except Exception as e:
-            st.error(f"Audio generation failed: {e}")
+        if not playht_user_id or not playht_api_key:
+            st.error("Please enter your PlayHT User ID and API Key.")
+        else:
+            try:
+                audio_file = convert_to_audio_playht(summary, playht_user_id, playht_api_key)
+                st.audio(audio_file, format="audio/mp3")
+            except Exception as e:
+                st.error(f"Audio generation failed: {e}")
 
     if user_question:
         with st.spinner("Answering your question..."):
             try:
                 prompt = f"{text[:12000]}\n\nAnswer this question:\n{user_question}"
                 response = model.generate_content(prompt)
-                answer = response.text.replace("*", "")
+                answer = response.text.replace("*", "")  # Remove asterisks from answer
                 st.success(answer)
             except Exception as e:
                 st.error(f"Q&A error: {e}")
