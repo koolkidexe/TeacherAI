@@ -42,7 +42,7 @@ def convert_to_audio_playht(text, user_id, api_key):
     }
     payload = {
         "text": text[:3000],
-        "voice": "s3://voice-cloning-zero-shot/alfonso",  # Alfonso voice
+        "voice": "s3://voice-cloning-zero-shot/Mikael",  # Alfonso voice
         "output_format": "mp3"
     }
 
